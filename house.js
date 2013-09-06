@@ -1,75 +1,30 @@
 
 project.currentStyle = {
     strokeColor: '#000000',
-    strokeWidth: 3
+    strokeWidth: 1
 }
 
-// Create the house wall.
-var point = new Point(500, 500);
-var housePath = new Path.Rectangle(point, point + [100, 100]);
+var grid = [];
 
-// Create the house roof.
-var path = new Path();
+var maxGridLines = 10,
+    maxGridColumns = 10,
+    maxCellSize = new Size(50, 50),
+    startPoint = new Point(maxCellSize, maxCellSize);
 
-point = point + [0, 0];
-path.moveTo(point);
+var currentPoint = startPoint;
 
-point = point + [50, -50];
-path.lineTo(point);
+for (var i = 0; i < maxGridLines; i++) {
 
-point = point + [50, 50];
-path.lineTo(point);
+    grid[i] = [];
 
+    for (var j = 0; j < maxGridColumns; j++) {
 
-var radius = 30;
-var branchWidth = 20;
-point = point + [100, -100];
+        currentPoint = [i * maxCellSize.width, j * maxCellSize.height];
 
-path = new Path();
-var vector = new Point({
-    angle: 45,
-    length: 50
-});
+        grid[i][j] = new Path.Rectangle(currentPoint, maxCellSize);
+        grid[i][j].strokeColor = 'black';
 
-
-
-path.segments = [
-    [[200, 200], 0, vector],
-    [[300, 200], vector.rotate(90), vector.rotate(-90)],
-    [[400, 200], vector.rotate(180), 0]
-];
-path.fullySelected = true;
-
-
-var sunBranches = new Path();
-sunBranches.segments = [
-    [[800, 400]],
-    [[900, 400]],
-    [[850, 400]],
-    [[850, 350]],
-    [[850, 450]]
-];
-
-var rotation = 0;
-
-// Create the sun center.
-var sun = 30;
-sun = new Path.Circle({
-    center: [850, 400],
-    radius: radius,
-    strokeColor: 'black',
-    fillColor: 'yellow'
-});
-
-function onKeyDown(event) {
-    if (event.key == 'right') {
-        rotation += 1;
-    }
-    else if (event.key == 'left') {
-        rotation -= 1;
     }
 }
 
-function onFrame(event) {
-    sunBranches.rotate(rotation);
-}
+grid[8][5].fillColor = '#FF0000';
