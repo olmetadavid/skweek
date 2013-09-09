@@ -1,59 +1,3 @@
-
-var Game = (function ($) {
-
-    var Game = {
-
-        grid: [],
-        properties: {
-            maxGridLines: 10,
-            maxGridColumns: 10,
-            sizeSide: 50
-        },
-
-        init: function (options) {
-
-            project.currentStyle = {
-                strokeColor: '#000000',
-                strokeWidth: 1
-            }
-
-            // Initialize options.
-            this.properties = $.extend(options, this.properties);
-
-            var maxCellSize = new Size(this.properties.sizeSide, this.properties.sizeSide),
-                startPoint = new Point(this.properties.maxCellSize, this.properties.maxCellSize),
-
-                // Prepare vector for moving.
-                vectorHorizontal = new Point(0, 0) + new Point(this.properties.sizeSide, 0),
-                vectorVertical = new Point(0, 0) + new Point(0, this.properties.sizeSide);
-
-            // Create the grid game.
-            var currentPoint = startPoint;
-            for (var i = 0; i < this.properties.maxGridLines; i++) {
-
-                this.grid[i] = [];
-
-                for (var j = 0; j < this.properties.maxGridColumns; j++) {
-
-                    currentPoint = [i * maxCellSize.width, j * maxCellSize.height];
-
-                    this.grid[i][j] = new Path.Rectangle(currentPoint, maxCellSize);
-                    this.grid[i][j].strokeColor = 'black';
-                }
-            }
-        }
-
-    };
-
-    var Box = {};
-
-    return Game;
-
-})(jQuery);
-
-Game.init();
-
-/*
 project.currentStyle = {
     strokeColor: '#000000',
     strokeWidth: 1
@@ -115,4 +59,3 @@ function movePlayer(event) {
 
 
 }
-*/
