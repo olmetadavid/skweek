@@ -1,118 +1,211 @@
-
 var Game = (function ($) {
 
-    var Game = {
+  var Game = {
 
-        grid: [],
-        properties: {
-            maxGridLines: 10,
-            maxGridColumns: 10,
-            sizeSide: 50
-        },
+    grid: null,
+    player: null,
+    vectorHorizontal: null,
+    vectorVertical: null,
+    properties: {
+      maxGridLines: 10,
+      maxGridColumns: 10,
+      sizeSide: 50
+    },
 
-        init: function (options) {
+    init: function (options) {
 
-            project.currentStyle = {
-                strokeColor: '#000000',
-                strokeWidth: 1
-            }
+      project.currentStyle = {
+        strokeColor: '#000000',
+        strokeWidth: 1
+      }
 
-            // Initialize options.
-            this.properties = $.extend(options, this.properties);
+      // Initialize options.
+      this.properties = $.extend(options, this.properties);
 
-            var maxCellSize = new Size(this.properties.sizeSide, this.properties.sizeSide),
-                startPoint = new Point(this.properties.maxCellSize, this.properties.maxCellSize),
+      // Create the grid.
+      this.grid = new Grid({
+        maxGridLines: this.properties.maxGridLines,
+        maxGridColumns: this.properties.maxGridColumns,
+        sizeSide: this.properties.sizeSide
+      }).create();
 
-                // Prepare vector for moving.
-                vectorHorizontal = new Point(0, 0) + new Point(this.properties.sizeSide, 0),
-                vectorVertical = new Point(0, 0) + new Point(0, this.properties.sizeSide);
+      // Create the player.
+      this.player = new Player({
+        initialPosition: this.grid.getPosition(),
+        size: this.properties.sizeSide / 2,
+        fillColor: '#000000'
+      }).create();
 
-            // Create the grid game.
-            var currentPoint = startPoint;
-            for (var i = 0; i < this.properties.maxGridLines; i++) {
+      // Prepare vector for moving.
+      this.vectorHorizontal = new Point(0, 0) + new Point(this.properties.sizeSide, 0);
+      this.vectorVertical = new Point(0, 0) + new Point(0, this.properties.sizeSide);
 
-                this.grid[i] = [];
+    },
 
-                for (var j = 0; j < this.properties.maxGridColumns; j++) {
+    movePlayer: function(event) {
 
-                    currentPoint = [i * maxCellSize.width, j * maxCellSize.height];
+      // Calculate the max size for a cell.
+      var maxCellSize = new Size(this.properties.sizeSide, this.properties.sizeSide);
 
-                    this.grid[i][j] = new Path.Rectangle(currentPoint, maxCellSize);
-                    this.grid[i][j].strokeColor = 'black';
-                }
-            }
+      if (event.key == 'right' && this.player.getPosition().x < (maxCellSize.width * 10 - this.properties.sizeSide)) {
+        this.player.move(this.vectorHorizontal);
+      }
+      else if (event.key == 'left' && this.player.getPosition().x > this.properties.sizeSide) {
+        this.player.move(-this.vectorHorizontal);
+      }
+      else if (event.key == 'down' && this.player.getPosition().y < (maxCellSize.height * 10 - this.properties.sizeSide)) {
+        this.player.move(this.vectorVertical);
+      }
+      else if (event.key == 'up' && this.player.getPosition().y > this.properties.sizeSide) {
+        this.player.move(-this.vectorVertical);
+      }
+    }
+
+  };
+
+  function Grid (param) {
+
+    var properties = $.extend({
+      maxGridLines: 10,
+      maxGridColumns: 10,
+      sizeSide: 50
+    }, param);
+
+    var grid = [];
+    var maxCellSize = new Size(properties.sizeSide, properties.sizeSide);
+
+    function create() {
+
+      // Create the grid game.
+      for (var i = 0; i < properties.maxGridLines; i++) {
+
+        grid[i] = [];
+
+        for (var j = 0; j < properties.maxGridColumns; j++) {
+
+          var currentPoint = [i * maxCellSize.width, j * maxCellSize.height];
+
+          grid[i][j] = new Box({
+            point: currentPoint,
+            maxCellSize: maxCellSize
+          }).create();
         }
+      }
 
+      // Return the current object to be used later.
+      return this;
+    }
+
+    function getPosition() {
+      return grid[0][0].getPosition();
+    }
+
+    return {
+      create: create,
+      getPosition: getPosition
+    }
+  }
+
+  function Box (param) {
+
+    var properties = $.extend({
+      checked: false,
+      blocked: false,
+      type: 'standard',
+      point: null,
+      maxCellSize: null,
+      strokeColor: '#000000'
+    }, param);
+
+    var path = null;
+
+    function create() {
+
+      // Create the path.
+      path = new Path.Rectangle(properties.point, properties.maxCellSize);
+      path.strokeColor = properties.strokeColor;
+
+      // Return the current object to be used later.
+      return this;
+    }
+
+    function isChecked() {
+      return properties.checked;
+    }
+
+    function isBlocked() {
+      return properties.blocked;
+    }
+
+    function getType() {
+      return properties.type;
+    }
+
+    function check() {
+      properties.checked = true;
+    }
+
+    function getPosition() {
+      return path.position;
+    }
+
+    return {
+      create: create,
+      isChecked: isChecked,
+      isBlocked: isBlocked,
+      getType: getType,
+      check: check,
+      getPosition: getPosition
+    };
+  };
+
+
+  function Player(param) {
+
+    var properties = $.extend({
+      initialPosition: [0, 0],
+      size: 100,
+      fillColor: '#000000'
+    }, param);
+
+    var player = null;
+
+    function create() {
+
+      // Create the player.
+      player = new Path.Circle(properties.initialPosition, properties.size);
+      player.fillColor = properties.fillColor;
+
+      // Return the current object to be used later.
+      return this;
+    }
+
+    function getPosition() {
+      return player.position;
+    }
+
+    function move(vector) {
+      player.position += vector;
+    }
+
+    return {
+      create: create,
+      getPosition: getPosition,
+      move: move
     };
 
-    var Box = {};
+  }
 
-    return Game;
+  return Game;
 
 })(jQuery);
 
 Game.init();
 
-/*
-project.currentStyle = {
-    strokeColor: '#000000',
-    strokeWidth: 1
-}
-
-var grid = [];
-
-var maxGridLines = 10,
-    maxGridColumns = 10,
-    sizeSide = 50,
-    maxCellSize = new Size(sizeSide, sizeSide),
-    startPoint = new Point(maxCellSize, maxCellSize);
-
-// Prepare vector for moving.
-var vectorHorizontal = new Point(0, 0) + new Point(sizeSide, 0);
-var vectorVertical = new Point(0, 0) + new Point(0, sizeSide);
-
-// Create the grid game.
-var currentPoint = startPoint;
-for (var i = 0; i < maxGridLines; i++) {
-
-    grid[i] = [];
-
-    for (var j = 0; j < maxGridColumns; j++) {
-
-        currentPoint = [i * maxCellSize.width, j * maxCellSize.height];
-
-        grid[i][j] = new Path.Rectangle(currentPoint, maxCellSize);
-        grid[i][j].strokeColor = 'black';
-    }
-}
-
-// Create the player.
-var player = new Path.Circle(grid[0][0].position, sizeSide / 2);
-player.fillColor = '#FF0000';
-
 
 function onKeyDown(event) {
 
-    console.log(event.key);
-    movePlayer(event)
+  console.log(event.key);
+  Game.movePlayer(event)
 
 }
-
-function movePlayer(event) {
-
-    if (event.key == 'right' && player.position.x < (maxCellSize.width * 10 - sizeSide)) {
-        player.position += vectorHorizontal;
-    }
-    else if (event.key == 'left' && player.position.x > sizeSide) {
-        player.position -= vectorHorizontal;
-    }
-    else if (event.key == 'down' && player.position.y < (maxCellSize.height * 10 - sizeSide)) {
-        player.position += vectorVertical;
-    }
-    else if (event.key == 'up' && player.position.y > sizeSide) {
-        player.position -= vectorVertical;
-    }
-
-
-}
-*/
