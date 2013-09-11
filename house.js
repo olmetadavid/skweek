@@ -40,6 +40,8 @@ var Game = (function ($) {
       this.vectorHorizontal = new Point(0, 0) + new Point(this.properties.sizeSide, 0);
       this.vectorVertical = new Point(0, 0) + new Point(0, this.properties.sizeSide);
 
+      this.grid.checkBox(5, 5);
+
     },
 
     movePlayer: function(event) {
@@ -100,7 +102,12 @@ var Game = (function ($) {
       return grid[0][0].getPosition();
     }
 
+    function checkBox(x, y) {
+      grid[x][y].check();
+    }
+
     return {
+      checkBox: checkBox,
       create: create,
       getPosition: getPosition
     }
@@ -114,7 +121,8 @@ var Game = (function ($) {
       type: 'standard',
       point: null,
       maxCellSize: null,
-      strokeColor: '#000000'
+      strokeColor: '#000000',
+      fillColorChecked: '#FF0000'
     }, param);
 
     var path = null;
@@ -124,6 +132,13 @@ var Game = (function ($) {
       // Create the path.
       path = new Path.Rectangle(properties.point, properties.maxCellSize);
       path.strokeColor = properties.strokeColor;
+
+      $(document).on('player.move', (function(event, point) {
+
+        if (point == path.position) {
+          this.check();
+        }
+      }).bind(this));
 
       // Return the current object to be used later.
       return this;
@@ -142,7 +157,12 @@ var Game = (function ($) {
     }
 
     function check() {
+
+      // Change the property.
       properties.checked = true;
+
+      // Color the box.
+      path.fillColor = properties.fillColorChecked
     }
 
     function getPosition() {
@@ -185,7 +205,12 @@ var Game = (function ($) {
     }
 
     function move(vector) {
+
+      // Move the player.
       player.position += vector;
+
+      // Trigger the event.
+      $(document).trigger('player.move', player.position);
     }
 
     return {
