@@ -12,7 +12,7 @@
   </head>
   <body>
     
-    <canvas id="myCanvas" width="1024" height="500"></canvas>
+    <canvas id="myCanvas" resize></canvas>
     
   </body>
 </html>

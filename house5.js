@@ -13,28 +13,12 @@ var Game = (function ($) {
     vectorHorizontal: null,
     vectorVertical: null,
     properties: {
+      maxGridLines: 10,
+      maxGridColumns: 10,
+      sizeSide: 50
     },
 
-    // Load a map.
-    loadMap: function(map) {
-
-      // Create the grid.
-      this.grid = new Grid(map).create();
-
-      // Prepare vector for moving.
-      this.vectorHorizontal = new Point(0, 0) + new Point(this.grid.getSizeSide(), 0);
-      this.vectorVertical = new Point(0, 0) + new Point(0, this.grid.getSizeSide());
-
-      return this;
-    },
-
-
-    start: function (options) {
-
-      // Display an error of no map has been loaded.
-      if (this.grid == null) {
-        throw 'No map has been loaded.';
-      }
+    init: function (options) {
 
       project.currentStyle = {
         strokeColor: '#000000',
@@ -43,35 +27,51 @@ var Game = (function ($) {
 
       // Initialize options.
       this.properties = $.extend(options, this.properties);
-
+//
+//      // Create the grid.
+//      this.grid = new Grid({
+//        maxGridLines: this.properties.maxGridLines,
+//        maxGridColumns: this.properties.maxGridColumns,
+//        sizeSide: this.properties.sizeSide
+//      }).create();
+//
       // Create the player.
       this.player = new Player({
         initialPosition: this.grid.getPosition(),
-        size: this.grid.getSizeSide() / 2,
+        size: this.properties.sizeSide / 2,
         fillColor: '#000000'
       }).create();
+//
+//      // Prepare vector for moving.
+//      this.vectorHorizontal = new Point(0, 0) + new Point(this.properties.sizeSide, 0);
+//      this.vectorVertical = new Point(0, 0) + new Point(0, this.properties.sizeSide);
+//
+//      // FOR TEST.
+//      this.grid.blockBox(5, 5);
+//      this.grid.blockBox(6, 5);
+//      this.grid.blockBox(7, 5);
+//      this.grid.blockBox(8, 5);
 
-      return this;
     },
 
     movePlayer: function(event) {
 
       // Calculate the max size for a cell.
-      var maxCellSize = new Size(this.grid.getSizeSide(), this.grid.getSizeSide());
+      var maxCellSize = new Size(this.properties.sizeSide, this.properties.sizeSide);
 
       // Define the vector for moving.
       var vector = null;
 
-      if (event.key == 'right' && this.player.getPosition().x < (maxCellSize.width * this.grid.getMaxGridColumns() - this.grid.getSizeSide())) {
+      if (event.key == 'right' && this.player.getPosition().x < (maxCellSize.width * 10 - this.properties.sizeSide)) {
         vector = this.vectorHorizontal;
       }
-      else if (event.key == 'left' && this.player.getPosition().x > this.grid.getSizeSide()) {
+      else if (event.key == 'left' && this.player.getPosition().x > this.properties.sizeSide) {
         vector = -this.vectorHorizontal;
       }
-      else if (event.key == 'down' && this.player.getPosition().y < (maxCellSize.height * this.grid.getMaxGridLines() - this.grid.getSizeSide())) {
+      else if (event.key == 'down' && this.player.getPosition().y < (maxCellSize.height * 10 - this.properties.sizeSide)) {
         vector = this.vectorVertical;
       }
-      else if (event.key == 'up' && this.player.getPosition().y > this.grid.getSizeSide()) {
+      else if (event.key == 'up' && this.player.getPosition().y > this.properties.sizeSide) {
         vector = -this.vectorVertical;
       }
 
@@ -84,8 +84,32 @@ var Game = (function ($) {
 
       // Move the player.
       this.player.move(vector);
+    },
 
-      return this;
+    // Load a map.
+    loadMap: function(map) {
+
+      // Initialize some game properties.
+      this.properties.maxGridColumns = map.maxGridColumns;
+      this.properties.maxGridLines = map.maxGridLines;
+      this.properties.sizeSide = map.sizeSide;
+
+      // Create the grid.
+      this.grid = new Grid({
+        maxGridLines: this.properties.maxGridLines,
+        maxGridColumns: this.properties.maxGridColumns,
+        sizeSide: this.properties.sizeSide
+      }).create();
+
+      // Prepare vector for moving.
+      this.vectorHorizontal = new Point(0, 0) + new Point(this.properties.sizeSide, 0);
+      this.vectorVertical = new Point(0, 0) + new Point(0, this.properties.sizeSide);
+
+      // FOR TEST.
+      this.grid.blockBox(5, 5);
+      this.grid.blockBox(6, 5);
+      this.grid.blockBox(7, 5);
+      this.grid.blockBox(8, 5);
     }
 
   };
@@ -103,14 +127,13 @@ var Game = (function ($) {
       maxGridLines: 10,
       maxGridColumns: 10,
       sizeSide: 50,
-      grid: [],
-      blocked: [], // Blocked boxes.
 
       // Coordinates of the start and end boxes for the game.
       startCoordinates: [0, 0],
-      endCoordinates: [0, 0]
+      endCoordinates: [9, 9]
     }, param);
 
+    var grid = [];
     var maxCellSize = new Size(properties.sizeSide, properties.sizeSide);
 
     function create() {
@@ -118,61 +141,50 @@ var Game = (function ($) {
       // Create the grid game.
       for (var i = 0; i < properties.maxGridLines; i++) {
 
+        grid[i] = [];
+
         for (var j = 0; j < properties.maxGridColumns; j++) {
+
+          var currentPoint = [i * maxCellSize.width, j * maxCellSize.height];
 
           // Check if the box is the start or end box.
           var type = 'standard';
           if (i == properties.startCoordinates[0] && j == properties.startCoordinates[1]) {
-            properties.grid[i][j].type = 'start';
+            type = 'start';
           }
           else if (i == properties.endCoordinates[0] && j == properties.endCoordinates[1]) {
-            properties.grid[i][j].type = 'end';
+            type = 'end';
           }
 
-          properties.grid[i][j] = new Box(properties.grid[i][j]).create();
+          grid[i][j] = new Box({
+            point: currentPoint,
+            maxCellSize: maxCellSize,
+            type: type
+          }).create();
         }
       }
-
-      // Block boxes if defined.
-      for (i = 0; i < properties.blocked.length; i++) {
-        blockBox(properties.blocked[i][0], properties.blocked[i][1]);
-      }
-
 
       // Return the current object to be used later.
       return this;
     }
 
     function getPosition() {
-      return properties.grid[0][0].getPosition();
-    }
-
-    function getSizeSide() {
-      return properties.sizeSide;
-    }
-
-    function getMaxGridLines() {
-      return properties.maxGridLines;
-    }
-
-    function getMaxGridColumns() {
-      console.log('coucou: ' + properties.maxGridColumns);
-      return properties.maxGridColumns;
+      return grid[0][0].getPosition();
     }
 
     function checkBox(x, y) {
-      properties.grid[y][x].check();
+      grid[x][y].check();
     }
 
     function blockBox(x, y) {
-      properties.grid[y][x].block();
+      grid[x][y].block();
     }
 
     function getBox(position) {
-      for (var i = 0; i < properties.maxGridLines; i++) {
-        for (var j = 0; j < properties.maxGridColumns; j++) {
-          if (properties.grid[i][j].getPosition() == position) {
-            return properties.grid[i][j];
+      for (var i = 0; i < grid.length; i++) {
+        for (var j = 0; j < grid[i].length; j++) {
+          if (grid[i][j].getPosition() == position) {
+            return grid[i][j];
           }
         }
       }
@@ -185,10 +197,7 @@ var Game = (function ($) {
       blockBox: blockBox,
       create: create,
       getBox: getBox,
-      getPosition: getPosition,
-      getSizeSide: getSizeSide,
-      getMaxGridLines: getMaxGridLines,
-      getMaxGridColumns: getMaxGridColumns
+      getPosition: getPosition
     }
   }
 
@@ -338,6 +347,7 @@ var Game = (function ($) {
 
 })(jQuery);
 
+Game.init();
 
 
 function onKeyDown(event) {
@@ -349,20 +359,11 @@ function onKeyDown(event) {
 
 var map = {
   grid: [],
-  maxGridLines: 20,
-  maxGridColumns: 15,
+  maxGridLines: 10,
+  maxGridColumns: 10,
   sizeSide: 50,
   startCoordinates: [0, 0],
-  endCoordinates: [12, 12],
-  blocked: [
-    [3, 3],
-    [4, 3],
-    [5, 3],
-
-    [8, 7],
-    [9, 7],
-    [9, 8]
-  ]
+  endCoordinates: [0, 0]
 };
 
 for (var i = 0; i < map.maxGridLines; i++) {
@@ -371,7 +372,7 @@ for (var i = 0; i < map.maxGridLines; i++) {
 
   for (var j = 0; j < map.maxGridColumns; j++) {
 
-    var currentPoint = [j * map.sizeSide, i * map.sizeSide];
+    var currentPoint = [i * map.sizeSide, j * map.sizeSide];
 
     // Check if the box is the start or end box.
     var type = 'standard';
@@ -383,8 +384,5 @@ for (var i = 0; i < map.maxGridLines; i++) {
     };
   }
 }
-console.log('MAP:');
+
 console.log(map);
-
-
-Game.loadMap(map).start();
