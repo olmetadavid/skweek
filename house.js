@@ -56,6 +56,11 @@ var Game = (function ($) {
 
     movePlayer: function(event) {
 
+      // If the player is currently moving, don't move again.
+      if (this.player.isMoving()) {
+        return false;
+      }
+
       // Calculate the max size for a cell.
       var maxCellSize = new Size(this.grid.getSizeSide(), this.grid.getSizeSide());
 
@@ -74,10 +79,14 @@ var Game = (function ($) {
       else if (event.key == 'up' && this.player.getPosition().y > this.grid.getSizeSide()) {
         vector = -this.vectorVertical;
       }
-
+console.log('VECTOR:');
+console.log(vector);
+console.log('POSITION:');
+console.log(this.player.getPosition());
       // Check if the player is going on a blocked box.
       var box = this.grid.getBox(this.player.getPosition() + vector);
-
+console.log('BOX:');
+console.log(box);
       if (box.isBlocked()) {
         return false;
       }
@@ -156,7 +165,6 @@ var Game = (function ($) {
     }
 
     function getMaxGridColumns() {
-      console.log('coucou: ' + properties.maxGridColumns);
       return properties.maxGridColumns;
     }
 
@@ -298,16 +306,37 @@ var Game = (function ($) {
     var properties = $.extend({
       initialPosition: [0, 0],
       size: 100,
-      fillColor: '#000000'
+      fillColor: '#000000',
+      speed: 4
     }, param);
 
-    var player = null;
+    var player = null,
+        moving = false,
+        destination = null;
 
     function create() {
 
       // Create the player.
       player = new Path.Circle(properties.initialPosition, properties.size);
       player.fillColor = properties.fillColor;
+
+      $(document).on('game.tick', (function(event) {
+
+        // If the element is moving.
+        if (moving) {
+
+          // Move the player.
+          var vector = destination - player.position;
+          player.position += vector / properties.speed;
+
+          // Stop moving under a treshold.
+          if (vector.length < 1) {
+            moving = false;
+            player.position = destination;
+          }
+        }
+
+      }).bind(this));
 
       // Return the current object to be used later.
       return this;
@@ -317,10 +346,17 @@ var Game = (function ($) {
       return player.position;
     }
 
+    function isMoving() {
+      return moving;
+    }
+
     function move(vector) {
 
-      // Move the player.
-      player.position += vector;
+      // Specify that the player is moving.
+      moving = true;
+
+      // Store the destination point.
+      destination = player.position + vector;
 
       // Trigger the event.
       $(document).trigger('player.move', player.position);
@@ -329,6 +365,7 @@ var Game = (function ($) {
     return {
       create: create,
       getPosition: getPosition,
+      isMoving: isMoving,
       move: move
     };
 
@@ -338,30 +375,29 @@ var Game = (function ($) {
 
 })(jQuery);
 
+function onFrame(event) {
+  $(document).trigger('game.tick');
+
+}
 
 
 function onKeyDown(event) {
 
   console.log(event.key);
-  Game.movePlayer(event)
+  Game.movePlayer(event);
 
 }
 
 var map = {
   grid: [],
-  maxGridLines: 20,
-  maxGridColumns: 15,
+  maxGridLines: 5,
+  maxGridColumns: 5,
   sizeSide: 50,
   startCoordinates: [0, 0],
-  endCoordinates: [12, 12],
+  endCoordinates: [4, 4],
   blocked: [
-    [3, 3],
-    [4, 3],
-    [5, 3],
-
-    [8, 7],
-    [9, 7],
-    [9, 8]
+    [2, 1],
+    [3, 1],
   ]
 };
 
