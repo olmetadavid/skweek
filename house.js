@@ -79,14 +79,10 @@ var Game = (function ($) {
       else if (event.key == 'up' && this.player.getPosition().y > this.grid.getSizeSide()) {
         vector = -this.vectorVertical;
       }
-console.log('VECTOR:');
-console.log(vector);
-console.log('POSITION:');
-console.log(this.player.getPosition());
+
       // Check if the player is going on a blocked box.
       var box = this.grid.getBox(this.player.getPosition() + vector);
-console.log('BOX:');
-console.log(box);
+
       if (box.isBlocked()) {
         return false;
       }
@@ -95,6 +91,13 @@ console.log(box);
       this.player.move(vector);
 
       return this;
+    },
+
+    // Define is the game is finished.
+    isFinished: function() {
+
+      return this.grid.isCompleted();
+
     }
 
   };
@@ -147,7 +150,6 @@ console.log(box);
         blockBox(properties.blocked[i][0], properties.blocked[i][1]);
       }
 
-
       // Return the current object to be used later.
       return this;
     }
@@ -188,6 +190,20 @@ console.log(box);
       return null;
     }
 
+    function isCompleted() {
+      for (var i = 0; i < properties.maxGridLines; i++) {
+        for (var j = 0; j < properties.maxGridColumns; j++) {
+          if (properties.grid[i][j].getType() == 'standard' &&
+              !properties.grid[i][j].isBlocked() &&
+              !properties.grid[i][j].isChecked()) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
     return {
       checkBox: checkBox,
       blockBox: blockBox,
@@ -196,7 +212,8 @@ console.log(box);
       getPosition: getPosition,
       getSizeSide: getSizeSide,
       getMaxGridLines: getMaxGridLines,
-      getMaxGridColumns: getMaxGridColumns
+      getMaxGridColumns: getMaxGridColumns,
+      isCompleted: isCompleted
     }
   }
 
@@ -237,11 +254,22 @@ console.log(box);
         path.fillColor = properties.fillColorEnd;
       }
 
-      $(document).on('player.move', (function(event, point) {
+      $(document).on('player.moved', (function(event, point) {
 
         if (point == path.position) {
           this.check();
+
+          // If the box is the end of the game.
+          if (properties.type == 'end') {
+
+            // Check if all the standard boxes is checked.
+            if (Game.isFinished()) {
+              console.log('FIN !');
+            }
+
+          }
         }
+
       }).bind(this));
 
       // Return the current object to be used later.
@@ -301,6 +329,7 @@ console.log(box);
   // -------------------------------------------------- //
   // Represent the player                               //
   // -------------------------------------------------- //
+
   function Player(param) {
 
     var properties = $.extend({
@@ -333,6 +362,9 @@ console.log(box);
           if (vector.length < 1) {
             moving = false;
             player.position = destination;
+
+            // Trigger the event.
+            $(document).trigger('player.moved', player.position);
           }
         }
 
@@ -359,7 +391,7 @@ console.log(box);
       destination = player.position + vector;
 
       // Trigger the event.
-      $(document).trigger('player.move', player.position);
+      $(document).trigger('player.moving', player.position);
     }
 
     return {
@@ -368,6 +400,55 @@ console.log(box);
       isMoving: isMoving,
       move: move
     };
+
+  }
+
+  // -------------------------------------------------- //
+  // Ennemy class                                       //
+  // -------------------------------------------------- //
+  // Represent an ennemy                                //
+  // -------------------------------------------------- //
+
+  function Ennemy(param) {
+
+    var properties = $.extend({
+      origin: [0, 0],
+      destination: [0, 0],
+      size: 100,
+      fillColor: '#FF0000',
+      speed: 3
+    }, param);
+
+    var ennemy = null,
+        moving = false;
+
+    function create() {
+
+      // Create the ennemy.
+      ennemy = new Path.Circle(properties.initialPosition, properties.size);
+      ennemy.fillColor = properties.fillColor;
+
+      $(document).on('game.tick', (function(event) {
+
+        // If the element is moving.
+        if (moving) {
+
+          // Move the player.
+          var vector = destination - player.position;
+          player.position += vector / properties.speed;
+
+          // Stop moving under a treshold.
+          if (vector.length < 1) {
+            moving = false;
+            player.position = destination;
+          }
+        }
+
+      }).bind(this));
+
+      // Return the current object to be used later.
+      return this;
+    }
 
   }
 
