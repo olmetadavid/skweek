@@ -10,8 +10,11 @@ var Game = (function ($) {
 
     grid: null,
     player: null,
+    enemies: null,
     vectorHorizontal: null,
     vectorVertical: null,
+    gameOver: false,
+    isWinner: false,
     properties: {
     },
 
@@ -19,7 +22,8 @@ var Game = (function ($) {
     loadMap: function(map) {
 
       // Create the grid.
-      this.grid = new Grid(map).create();
+      this.grid = new Grid(map.grid).create();
+      this.enemies = map.enemies;
 
       // Prepare vector for moving.
       this.vectorHorizontal = new Point(0, 0) + new Point(this.grid.getSizeSide(), 0);
@@ -51,6 +55,22 @@ var Game = (function ($) {
         fillColor: '#000000'
       }).create();
 
+      // Create enemies.
+      for (var i = 0; i < this.enemies.length; i++) {
+
+        // Get the position of the origin and destination.
+        var origin = this.grid.getBox(this.enemies[i].origin[0], this.enemies[i].origin[1]);
+        var destination = this.grid.getBox(this.enemies[i].destination[0], this.enemies[i].destination[1]);
+
+        // Calculate some data for enemy.
+        this.enemies[i].origin = origin.getPosition();
+        this.enemies[i].destination = destination.getPosition();
+        this.enemies[i].size = this.grid.getSizeSide() / 3;
+
+        // Create and reference the enemy.
+        this.enemies[i] = new Enemy(this.enemies[i]).create();
+      }
+
       return this;
     },
 
@@ -81,7 +101,7 @@ var Game = (function ($) {
       }
 
       // Check if the player is going on a blocked box.
-      var box = this.grid.getBox(this.player.getPosition() + vector);
+      var box = this.grid.getBoxByPosition(this.player.getPosition() + vector);
 
       if (box.isBlocked()) {
         return false;
@@ -95,10 +115,31 @@ var Game = (function ($) {
 
     // Define is the game is finished.
     isFinished: function() {
-
       return this.grid.isCompleted();
+    },
 
+    // Define the game as over.
+    over: function() {
+      this.gameOver = true;
+      console.log('GAME OVER !');
+    },
+
+    isGameOver: function() {
+      return this.gameOver;
+    },
+
+    loose: function() {
+      this.isWinner = false;
+      console.log('YOU LOOSE !');
+      this.over();
+    },
+
+    win: function() {
+      this.isWinner = true;
+      console.log('YOU WIN !');
+      this.over();
     }
+
 
   };
 
@@ -178,7 +219,11 @@ var Game = (function ($) {
       properties.grid[y][x].block();
     }
 
-    function getBox(position) {
+    function getBox(x, y) {
+      return properties.grid[y][x];
+    }
+
+    function getBoxByPosition(position) {
       for (var i = 0; i < properties.maxGridLines; i++) {
         for (var j = 0; j < properties.maxGridColumns; j++) {
           if (properties.grid[i][j].getPosition() == position) {
@@ -209,6 +254,7 @@ var Game = (function ($) {
       blockBox: blockBox,
       create: create,
       getBox: getBox,
+      getBoxByPosition: getBoxByPosition,
       getPosition: getPosition,
       getSizeSide: getSizeSide,
       getMaxGridLines: getMaxGridLines,
@@ -254,6 +300,7 @@ var Game = (function ($) {
         path.fillColor = properties.fillColorEnd;
       }
 
+      // Manage player moves.
       $(document).on('player.moved', (function(event, point) {
 
         if (point == path.position) {
@@ -263,8 +310,8 @@ var Game = (function ($) {
           if (properties.type == 'end') {
 
             // Check if all the standard boxes is checked.
-            if (Game.isFinished()) {
-              console.log('FIN !');
+            if (Game.isFinished() && !Game.isGameOver()) {
+              Game.win();
             }
 
           }
@@ -336,7 +383,7 @@ var Game = (function ($) {
       initialPosition: [0, 0],
       size: 100,
       fillColor: '#000000',
-      speed: 4
+      speed: 2
     }, param);
 
     var player = null,
@@ -358,6 +405,9 @@ var Game = (function ($) {
           var vector = destination - player.position;
           player.position += vector / properties.speed;
 
+          // Trigger the event.
+          $(document).trigger('player.moving', player.position);
+
           // Stop moving under a treshold.
           if (vector.length < 1) {
             moving = false;
@@ -378,6 +428,10 @@ var Game = (function ($) {
       return player.position;
     }
 
+    function getPlayer() {
+      return player;
+    }
+
     function isMoving() {
       return moving;
     }
@@ -391,12 +445,13 @@ var Game = (function ($) {
       destination = player.position + vector;
 
       // Trigger the event.
-      $(document).trigger('player.moving', player.position);
+      $(document).trigger('player.move', player.position);
     }
 
     return {
       create: create,
       getPosition: getPosition,
+      getPlayer: getPlayer,
       isMoving: isMoving,
       move: move
     };
@@ -404,50 +459,88 @@ var Game = (function ($) {
   }
 
   // -------------------------------------------------- //
-  // Ennemy class                                       //
+  // Enemy class                                       //
   // -------------------------------------------------- //
-  // Represent an ennemy                                //
+  // Represent an enemy                                //
   // -------------------------------------------------- //
 
-  function Ennemy(param) {
+  function Enemy(param) {
 
     var properties = $.extend({
       origin: [0, 0],
       destination: [0, 0],
       size: 100,
       fillColor: '#FF0000',
-      speed: 3
+      speed: 100
     }, param);
 
-    var ennemy = null,
-        moving = false;
+    var enemy = null,
+        direction = null,
+        distance = null;
 
     function create() {
 
-      // Create the ennemy.
-      ennemy = new Path.Circle(properties.initialPosition, properties.size);
-      ennemy.fillColor = properties.fillColor;
+      // Create the enemy.
+      enemy = new Path.Circle(properties.origin, properties.size);
+      enemy.fillColor = properties.fillColor;
+
+      // Define the direction and the distance.
+      direction = properties.destination - properties.origin;
+      distance = direction.length;
 
       $(document).on('game.tick', (function(event) {
 
-        // If the element is moving.
-        if (moving) {
-
-          // Move the player.
-          var vector = destination - player.position;
-          player.position += vector / properties.speed;
-
-          // Stop moving under a treshold.
-          if (vector.length < 1) {
-            moving = false;
-            player.position = destination;
-          }
+        // If the enemy has touched the player, the game is over.
+        if (enemy.getIntersections(Game.player.getPlayer()).length > 0) {
+          Game.loose();
         }
+
+        // Calculate the distance left.
+        distance -= direction.length / properties.speed;
+
+        // Move the enemy in the good direction.
+        enemy.position += direction / properties.speed;
+
+        // Stop moving under a treshold.
+        if (distance <= 0) {
+
+          // Place the enemy if arrives to destination or origin..
+          if (direction == properties.destination - properties.origin) {
+            enemy.position = properties.destination;
+          }
+          else {
+            enemy.position = properties.origin;
+          }
+
+          // Reverse the direction and reinitialize the distance.
+          direction = -direction;
+          distance = direction.length;
+        }
+
+        // Trigger the event.
+        $(document).trigger('enemy.moved', enemy.position);
 
       }).bind(this));
 
+      // Manage player moves.
+      $(document).on('player.moving', (function(event, point) {
+
+
+      }).bind(this));
+
+      // Automatically move the ennemy.
+      move();
+
       // Return the current object to be used later.
       return this;
+    }
+
+    function move() {
+      moving = true;
+    }
+
+    return {
+      create: create
     }
 
   }
@@ -458,7 +551,6 @@ var Game = (function ($) {
 
 function onFrame(event) {
   $(document).trigger('game.tick');
-
 }
 
 
@@ -470,38 +562,53 @@ function onKeyDown(event) {
 }
 
 var map = {
-  grid: [],
-  maxGridLines: 5,
-  maxGridColumns: 5,
-  sizeSide: 50,
-  startCoordinates: [0, 0],
-  endCoordinates: [4, 4],
-  blocked: [
-    [2, 1],
-    [3, 1],
+  grid: {
+    grid: [],
+    maxGridLines: 5,
+    maxGridColumns: 5,
+    sizeSide: 50,
+    startCoordinates: [0, 0],
+    endCoordinates: [4, 4],
+    blocked: [
+      [2, 1],
+      [3, 1]
+    ]
+  },
+  enemies: [
+    {
+      origin: [2, 0],
+      destination: [3, 0]
+    },
+    {
+      origin: [1, 3],
+      destination: [3, 3],
+      speed: 200
+    },
+    {
+      origin: [4, 0],
+      destination: [4, 3]
+    }
   ]
 };
 
-for (var i = 0; i < map.maxGridLines; i++) {
+for (var i = 0; i < map.grid.maxGridLines; i++) {
 
-  map.grid[i] = [];
+  map.grid.grid[i] = [];
 
-  for (var j = 0; j < map.maxGridColumns; j++) {
+  for (var j = 0; j < map.grid.maxGridColumns; j++) {
 
-    var currentPoint = [j * map.sizeSide, i * map.sizeSide];
+    var currentPoint = [j * map.grid.sizeSide, i * map.grid.sizeSide];
 
     // Check if the box is the start or end box.
     var type = 'standard';
 
-    map.grid[i][j] = {
+    map.grid.grid[i][j] = {
       point: currentPoint,
-      maxCellSize: map.sizeSide,
+      maxCellSize: map.grid.sizeSide,
       type: 'standard'
     };
   }
 }
-console.log('MAP:');
-console.log(map);
 
 
 Game.loadMap(map).start();
