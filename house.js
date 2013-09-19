@@ -329,6 +329,10 @@ var Game = (function ($) {
       return properties.type;
     }
 
+    function isSpecial() {
+      return isBlocked() || properties.type != 'standard';
+    }
+
     function check() {
 
       // Change the property.
@@ -357,6 +361,7 @@ var Game = (function ($) {
       create: create,
       isChecked: isChecked,
       isBlocked: isBlocked,
+      isSpecial: isSpecial,
       getType: getType,
       check: check,
       block: block,
@@ -464,7 +469,8 @@ var Game = (function ($) {
       paths: [],
       size: 100,
       fillColor: '#FF0000',
-      speed: 200
+      speed: 50,
+      moveType: 'random'
     }, param);
 
     var enemy = null,
@@ -481,15 +487,25 @@ var Game = (function ($) {
         return false;
       }
 
-      // Create all paths.
-      for (var i = 0; i < properties.paths.length; i++) {
+      if (properties.moveType == 'fixed') {
 
-        // Get the position of the origin and destination.
-        var point = Game.grid.getBox(properties.paths[i][0], properties.paths[i][1]);
+        // Create all paths.
+        for (var i = 0; i < properties.paths.length; i++) {
 
-        // Calculate some data for enemy.
-        properties.paths[i] = point.getPosition();
+          // Get the position of the origin and destination.
+          var point = Game.grid.getBox(properties.paths[i][0], properties.paths[i][1]);
+
+          // Calculate some data for enemy.
+          properties.paths[i] = point.getPosition();
+        }
       }
+      else {
+
+        // Generate random paths.
+        random();
+
+      }
+
 
       // Create the enemy.
       enemy = new Path.Circle(properties.paths[0], properties.size);
@@ -533,8 +549,6 @@ var Game = (function ($) {
           next = next + sign;
           direction = properties.paths[index + sign] - properties.paths[index];
 
-          console.log(direction);
-
           // Calculate the distance.
           distance = direction.length;
         }
@@ -560,6 +574,85 @@ var Game = (function ($) {
     function move() {
       moving = true;
     }
+
+    function random() {
+
+      var pathsLength = 10;
+
+      // Initialize the paths array.
+      properties.paths = [];
+      var x = -1,
+          y = -1;
+
+      // Create all paths.
+      for (var i = 0; i < pathsLength; i++) {
+
+        var position = null,
+            originX = x,
+            originY = y;
+
+        do {
+
+          // Define axis move.
+          var isVertical = (Math.round(Math.random()) == 0) ? false : true;
+
+          // Create a random point as start point.
+          if (properties.paths.length == 0) {
+            originX = x = Math.floor(Math.random() * (Game.grid.getMaxGridColumns() - 1));
+            originY = y = Math.floor(Math.random() * (Game.grid.getMaxGridLines() - 1));
+          }
+          else {
+
+            // Create random coordinates around the starting point.
+            if (isVertical) {
+              y = originY + Math.floor(Math.random() * 3 - 1);
+              x = originX;
+            }
+            else {
+              x = originX + Math.floor(Math.random() * 3 - 1);
+              y = originY;
+            }
+          }
+
+          // Get a valid position.
+          position = getBox(x, y);
+
+        } while (position == false);
+
+        // Add the position to the path.
+        properties.paths[i] = position;
+      }
+
+    }
+
+    function getBox(x, y) {
+
+      // Check if the position is out of the game.
+      if (x < 0 || y < 0 ||
+          x >= Game.grid.getMaxGridColumns() ||y >= Game.grid.getMaxGridLines()) {
+        return false;
+      }
+
+      // Get the point.
+      var point =  Game.grid.getBox(x, y);
+
+      // Check if the point isn't special.
+      if (point.isSpecial()) {
+        return false;
+      }
+
+      // Check if the point has been added.
+      for (j = 0; j < properties.paths.length; j++) {
+        if (properties.paths[j].x == point.getPosition().x &&
+          properties.paths[j].y == point.getPosition().y) {
+          return false;
+        }
+      }
+
+      return point.getPosition();
+
+    }
+
 
     return {
       create: create
@@ -609,8 +702,7 @@ var map = {
         [0, 4],
         [1, 4],
         [2, 4]
-      ],
-      speed: 300
+      ]
     }
   ]
 };

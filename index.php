@@ -7,7 +7,7 @@
     <script type="text/javascript" src="js/jquery-2.0.3.min.js"></script>
 
     <script type="text/javascript" src="js/paper.js"></script>
-    <script type="text/paperscript" src="house6.js" canvas="myCanvas"></script>
+    <script type="text/paperscript" src="house.js" canvas="myCanvas"></script>
 
   </head>
   <body>
